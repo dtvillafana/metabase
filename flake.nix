@@ -190,7 +190,9 @@
                 substituteInPlace frontend/build/embedding-sdk/rspack/get-build-info-values.js \
                   --replace-fail \
                   'BUILD_TIME: new Date().toISOString(),' \
-                  'BUILD_TIME: new Date(Number(process.env.SOURCE_DATE_EPOCH) * 1000).toISOString(),'
+                  'BUILD_TIME: new Date(${
+                    toString (if self ? rev then self.lastModified else 1)
+                  } * 1000).toISOString(),'
               '';
 
               nativeBuildInputs = with pkgs; [
