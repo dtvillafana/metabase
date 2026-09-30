@@ -302,6 +302,18 @@
                   JAVA_TOOL_OPTIONS= jar --create --no-manifest --file="$jar_path" @"$TMPDIR/jar-entries"
                 )
 
+                # Classpath resource discovery also needs explicit directory entries.
+                python3 - "$jar_path" "$repack_dir" <<'PY'
+                import sys
+                from pathlib import Path
+                from zipfile import ZipFile
+
+                root = Path(sys.argv[2])
+                with ZipFile(sys.argv[1], "a") as archive:
+                    for directory in sorted(path for path in root.rglob("*") if path.is_dir()):
+                        archive.write(directory, directory.relative_to(root).as_posix() + "/")
+                PY
+
                 runHook postBuild
               '';
 
