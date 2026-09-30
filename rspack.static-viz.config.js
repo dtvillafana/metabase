@@ -2,7 +2,10 @@ const rspack = require("@rspack/core");
 const yaml = require("js-yaml");
 const { StatsWriterPlugin } = require("webpack-stats-plugin");
 
-const { WEBPACK_BUNDLE } = require("./frontend/build/shared/constants");
+const {
+  IS_EE_BUILD,
+  WEBPACK_BUNDLE,
+} = require("./frontend/build/shared/constants");
 const {
   SIDE_EFFECT_FREE_RULE,
 } = require("./frontend/build/shared/rspack/side-effect-free-modules");
@@ -135,10 +138,9 @@ module.exports = (env) => {
         "embedding-sdk-bundle": SDK_BUNDLE_SRC_PATH,
         "embedding-sdk-shared": SDK_SHARED_SRC_PATH,
         "process/browser": require.resolve("process/browser"),
-        "ee-overrides":
-          process.env.MB_EDITION === "ee"
-            ? ENTERPRISE_SRC_PATH + "/static-viz-overrides"
-            : SRC_PATH + "/utils/noop",
+        "ee-overrides": IS_EE_BUILD
+          ? ENTERPRISE_SRC_PATH + "/static-viz-overrides"
+          : SRC_PATH + "/utils/noop",
       },
       fallback: {
         crypto: require.resolve("crypto-browserify"),

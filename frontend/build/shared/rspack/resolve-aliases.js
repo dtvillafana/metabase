@@ -2,7 +2,7 @@
 
 const path = require("path");
 
-const { IS_DEV_MODE } = require("../constants");
+const { IS_DEV_MODE, IS_EE_BUILD } = require("../constants");
 
 const ROOT_PATH = path.resolve(__dirname, "../../../..");
 const ASSETS_PATH = ROOT_PATH + "/resources/frontend_client/app/assets";
@@ -29,9 +29,7 @@ const E2E_PATH = ROOT_PATH + "/e2e";
 const isDevMode = IS_DEV_MODE;
 
 const resolveEnterprisePathOrNoop = (/** @type {string} */ subpath) =>
-  process.env.MB_EDITION === "ee"
-    ? ENTERPRISE_SRC_PATH + subpath
-    : SRC_PATH + "/utils/noop";
+  IS_EE_BUILD ? ENTERPRISE_SRC_PATH + subpath : SRC_PATH + "/utils/noop";
 
 /**
  * Shared resolve aliases used by both rspack.main.config.js and
@@ -59,10 +57,9 @@ const RESOLVE_ALIASES = {
   // with ie11 point to the minified version
   icepick: ROOT_PATH + "/node_modules/icepick/icepick.min",
   // conditionally load either the EE plugins file or a empty file in the CE code tree
-  "ee-plugins":
-    process.env.MB_EDITION === "ee"
-      ? ENTERPRISE_SRC_PATH + "/plugins"
-      : SRC_PATH + "/plugins/noop",
+  "ee-plugins": IS_EE_BUILD
+    ? ENTERPRISE_SRC_PATH + "/plugins"
+    : SRC_PATH + "/plugins/noop",
   "ee-overrides": resolveEnterprisePathOrNoop("/overrides"),
   embedding: EMBEDDING_SRC_PATH,
   "embedding-sdk-package": SDK_PACKAGE_SRC_PATH,
@@ -74,10 +71,9 @@ const RESOLVE_ALIASES = {
   "sdk-iframe-embedding-script-ee-plugins": resolveEnterprisePathOrNoop(
     "/sdk-iframe-embedding-script-plugins",
   ),
-  "sdk-ee-plugins":
-    process.env.MB_EDITION === "ee"
-      ? ENTERPRISE_SRC_PATH + "/sdk-plugins"
-      : SRC_PATH + "/plugins/noop",
+  "sdk-ee-plugins": IS_EE_BUILD
+    ? ENTERPRISE_SRC_PATH + "/sdk-plugins"
+    : SRC_PATH + "/plugins/noop",
 };
 
 module.exports = { RESOLVE_ALIASES };

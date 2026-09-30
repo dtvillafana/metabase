@@ -7,6 +7,7 @@
    [mb.hawk.parallel]
    [metabase.app-db.connection :as mdb.connection]
    [metabase.app-db.core :as mdb]
+   [metabase.config.core :as config]
    [metabase.premium-features.core :as premium-features]
    [metabase.premium-features.task.clear-token-cache]
    [metabase.premium-features.test-util :as tu]
@@ -339,9 +340,12 @@
             from the store.metabase.com endpoint for that token."
     (is (= {:valid false, :status "Token does not exist.", :canonical? true}
            (token-check/check-token (fresh-checker) (tu/random-token)))))
-  (testing "If premium-embedding-token is nil, the token-status setting should also be nil."
+  (testing "Without a token, enterprise builds expose local features; OSS has no token status."
     (mt/with-temporary-setting-values [premium-embedding-token nil]
-      (is (nil? (premium-features/token-status))))))
+      (if config/ee-available?
+        (is (=? {:valid true :status "self-hosted" :trial false}
+                (premium-features/token-status)))
+        (is (nil? (premium-features/token-status)))))))
 
 (deftest active-users-count-setting-test
   (testing "returns the number of active users"

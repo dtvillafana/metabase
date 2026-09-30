@@ -3,14 +3,13 @@
 
 const path = require("path");
 
-const {
-  CopyJsFromTmpDirectoryPlugin,
-} = require("./frontend/build/shared/rspack/copy-js-from-tmp-directory-plugin");
-
+const { IS_EE_BUILD } = require("./frontend/build/shared/constants");
 const {
   COMPRESSION_CONFIG,
 } = require("./frontend/build/shared/rspack/compression");
-
+const {
+  CopyJsFromTmpDirectoryPlugin,
+} = require("./frontend/build/shared/rspack/copy-js-from-tmp-directory-plugin");
 const {
   SIDE_EFFECT_FREE_RULE,
 } = require("./frontend/build/shared/rspack/side-effect-free-modules");
@@ -35,9 +34,7 @@ const OUT_TEMP_PATH = path.resolve(BUILD_PATH, "tmp-embed-js");
 const DEV_PORT = process.env.MB_FRONTEND_DEV_PORT || 8080;
 
 const resolveEnterprisePathOrNoop = (path) =>
-  process.env.MB_EDITION === "ee"
-    ? ENTERPRISE_SRC_PATH + path
-    : SRC_PATH + "/utils/noop";
+  IS_EE_BUILD ? ENTERPRISE_SRC_PATH + path : SRC_PATH + "/utils/noop";
 
 module.exports = {
   name: "iframe_sdk_embed_v1",

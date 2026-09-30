@@ -264,7 +264,7 @@
 
     clojure -X:build:build/uberjar
     clojure -X:build:build/uberjar :edition :ee"
-  [{:keys [edition], :or {edition :oss}}]
+  [{:keys [edition], :or {edition :ee}}]
   (u/step (format "Build %s uberjar" edition)
     (with-duration-ms [duration-ms]
       (clean!)

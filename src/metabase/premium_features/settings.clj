@@ -385,6 +385,19 @@
   "Should we allow users to view database schemas as ER diagrams?"
   :schema-viewer)
 
+(defn self-hosted-features
+  "Returns the feature names available without a license when enterprise code is present."
+  []
+  ;; These flags describe external services or instance identity, not local functionality.
+  (let [service-features #{:admin-security-center :attached-dwh :cloud-custom-smtp :development-mode
+                           :etl-connections :etl-connections-pg :hosting :metabot-v3 :metabase-ai-managed
+                           :offer-metabase-ai-managed :support-users}]
+    (if config/ee-available?
+      (into #{"custom-viz" "no-upsell"}
+            (comp (remove service-features) (map name))
+            @premium-features)
+      #{})))
+
 (defn- -token-features []
   {:admin_security_center          (security-center-enabled?)
    :advanced_permissions           (enable-advanced-permissions?)

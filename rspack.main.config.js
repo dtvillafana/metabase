@@ -16,6 +16,7 @@ const {
 
 const {
   IS_DEV_MODE,
+  IS_EE_BUILD,
   LICENSE_TEXT,
   WEBPACK_BUNDLE,
 } = require("./frontend/build/shared/constants");
@@ -42,7 +43,7 @@ const BUILD_PATH = __dirname + "/resources/frontend_client";
 
 // Data apps are an enterprise plugin (the iframe entry + its template live in the
 // enterprise tree), so their build entries and HTML are only produced in EE builds.
-const isEEBuild = process.env.MB_EDITION === "ee";
+const isEEBuild = IS_EE_BUILD;
 
 // For sharing the embedding snippets in the docs with the embedding
 // onboarding flow in the app to keep the snippets always in sync.

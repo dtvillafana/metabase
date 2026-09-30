@@ -15,7 +15,7 @@
 (use-fixtures :once (fixtures/initialize :db))
 
 (deftest transform-metered-as-test
-  (mt/with-premium-features #{:transforms-basic :writable-connection}
+  (mt/with-premium-features #{:hosting :transforms-basic :writable-connection}
     (is (= "transform-advanced"
            (premium-features/transform-metered-as :native)
            (premium-features/transform-metered-as :mbql))))
@@ -23,9 +23,13 @@
     (is (= "transform-basic"
            (premium-features/transform-metered-as :native)
            (premium-features/transform-metered-as :mbql))))
-  (mt/with-premium-features #{:transforms-python}
+  (mt/with-premium-features #{:hosting :transforms-python}
     (is (= "transform-advanced"
            (premium-features/transform-metered-as :python))))
+  (testing "Self-hosted transforms are not metered, including advanced and Python transforms"
+    (mt/with-premium-features #{:transforms-basic :writable-connection :transforms-python}
+      (doseq [source-type [:native :mbql :python]]
+        (is (nil? (premium-features/transform-metered-as source-type))))))
   (mt/with-premium-features #{}
     (is (= nil
            (premium-features/transform-metered-as :native)

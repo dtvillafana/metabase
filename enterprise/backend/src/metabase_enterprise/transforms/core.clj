@@ -25,25 +25,26 @@
 
 (defenterprise transform-metered-as
   "Return the meter bucket a new transform run of the given source-type counts toward,
-   based on the instance's current premium features. Returns nil when the run is not metered."
+   based on the instance's current premium features. Returns nil for self-hosted runs."
   :feature :none
   [source-type]
   (let [hosted?   (premium-features/has-feature? :hosting)
         basic?    (premium-features/has-feature? :transforms-basic)
         writable? (premium-features/has-feature? :writable-connection)
         python?   (premium-features/has-feature? :transforms-python)]
-    (case (keyword source-type)
-      (:native :mbql) (cond
-                        ;; These transforms are metered differently based on plan and addons status:
-                        ;; - the advanced transforms addon adds the writable-connection feature, which
-                        ;;   augments what they can do and meters them as advanced
-                        (and basic? writable?) "transform-advanced"
-                        ;; - hosted instances with basic transforms get these metered as basic
-                        (and basic? hosted?)   "transform-basic"
-                        ;; - self-hosted customers without the advanced add-on aren't metered for these at all
-                        :else                  nil)
-      :python         (when python? "transform-advanced")
-      nil)))
+    (when hosted?
+      (case (keyword source-type)
+        (:native :mbql) (cond
+                          ;; These transforms are metered differently based on plan and addons status:
+                          ;; - the advanced transforms addon adds the writable-connection feature, which
+                          ;;   augments what they can do and meters them as advanced
+                          (and basic? writable?) "transform-advanced"
+                          ;; - hosted instances with basic transforms get these metered as basic
+                          (and basic? hosted?)   "transform-basic"
+                          ;; - self-hosted customers without the advanced add-on aren't metered for these at all
+                          :else                  nil)
+        :python         (when python? "transform-advanced")
+        nil))))
 
 (defenterprise transform-stats
   "Calculate successful transform runs over a window of the previous UTC day 00:00-23:59.

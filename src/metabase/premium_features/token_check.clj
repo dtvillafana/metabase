@@ -245,12 +245,13 @@
 (declare decode-airgap-token)
 
 (mu/defn max-users-allowed :- [:maybe pos-int?]
-  "Returns the max users value from an airgapped key, or nil indicating there is no limit."
+  "Returns nil for license-free self-hosted builds, otherwise the airgap token's user limit."
   []
-  (when-let [token (premium-features.settings/premium-embedding-token)]
-    (when (str/starts-with? token "airgap_")
-      (let [max-users (:max-users (decode-airgap-token token))]
-        (when (pos? max-users) max-users)))))
+  (when (empty? (premium-features.settings/self-hosted-features))
+    (when-let [token (premium-features.settings/premium-embedding-token)]
+      (when (str/starts-with? token "airgap_")
+        (let [max-users (:max-users (decode-airgap-token token))]
+          (when (pos? max-users) max-users))))))
 
 (defn- active-user-count []
   (premium-features.db/active-personal-user-count))
@@ -611,6 +612,20 @@
   []
   (mr/validate AirgapToken (premium-features.settings/premium-embedding-token)))
 
+(defn -token-status
+  "Returns local self-hosted entitlements, or the unchanged status of a hosted instance's token."
+  []
+  (let [status         (some-> (premium-features.settings/premium-embedding-token) (check-token))
+        local-features (premium-features.settings/self-hosted-features)]
+    (if (or (empty? local-features) (some #{"hosting"} (:features status)))
+      status
+      (merge status
+             {:valid      true
+              :canonical? true
+              :trial      false
+              :status     "self-hosted"
+              :features   (vec (sort (into local-features (when (:valid status) (:features status)))))}))))
+
 (let [cached-logger (memoize/ttl
                      ^{::memoize/args-fn (fn [[token _e]] [token])}
                      (fn [_token e]
@@ -619,24 +634,16 @@
                      :ttl/threshold (* 1000 60 5))]
   #_{:clj-kondo/ignore [:metabase/discourage-dynamic-vars]}
   (mu/defn ^:dynamic *token-features* :- [:set ms/NonBlankString]
-    "Get the features associated with the system's premium features token."
+    "Get the instance's local and token-provided features."
     []
     (try
-      (or (some-> (premium-features.settings/premium-embedding-token)
-                  (check-token)
-                  :features set)
+      (or (some-> (-token-status) :features set)
           #{})
       (catch Throwable e
         (when (:pass-thru (ex-data e))
           (throw e))
         (cached-logger (premium-features.settings/premium-embedding-token) e)
-        #{}))))
-
-(defn -token-status
-  "Getter for the [[metabase.premium-features.settings/token-status]] setting."
-  []
-  (some-> (premium-features.settings/premium-embedding-token)
-          (check-token)))
+        (premium-features.settings/self-hosted-features)))))
 
 (mu/defn plan-alias :- [:maybe :string]
   "Returns a string representing the instance's current plan, if included in the last token status request."
@@ -662,12 +669,12 @@
           :meters))
 
 (defn has-any-features?
-  "True if we have a valid premium features token with ANY features."
+  "True if the instance has any local or token-provided features."
   []
   (boolean (seq (*token-features*))))
 
 (defn has-feature?
-  "Does this instance's premium token have `feature`?
+  "Does this instance have the local or token-provided `feature`?
 
     (has-feature? :sandboxes)          ; -> true
     (has-feature? :toucan-management)  ; -> false"
@@ -675,14 +682,22 @@
   (contains? (*token-features*) (name feature)))
 
 (defn canonically-has-feature?
-  "Returns `true` if the token definitively has `feature`, `false` if it definitively does not, or `nil` if the token
-  status is indeterminate (e.g., network failure, timeout). Returns `false` (not `nil`) when no token is configured."
+  "Returns whether `feature` is definitively available, or nil when token status is indeterminate."
   [feature]
-  (if-let [token (premium-features.settings/premium-embedding-token)]
-    (let [result (check-token token)]
-      (when (:canonical? result)
-        (boolean (contains? (set (:features result)) (name feature)))))
-    false))
+  (let [result (some-> (premium-features.settings/premium-embedding-token) (check-token))]
+    (cond
+      (and (contains? (premium-features.settings/self-hosted-features) (name feature))
+           (not (some #{"hosting"} (:features result))))
+      true
+
+      (nil? result)
+      false
+
+      (:canonical? result)
+      (contains? (set (:features result)) (name feature))
+
+      :else
+      nil)))
 
 (defn ee-feature-error
   "Returns an error that can be used to throw when an enterprise feature check fails."

@@ -23,7 +23,7 @@
      (get (premium-features/locked-meters) meter-key))))
 
 (defn transforms-meter-locked?
-  "True if either of the two transforms meters (`:transform-basic-runs` or
+  "True on hosted instances if either of the two transforms meters (`:transform-basic-runs` or
    `:transform-advanced-runs`) is currently locked. Per harbormaster's
    mutual-exclusivity constraint, at most one of these is populated for a
    given customer, so this aggregate reduces to 'is the customer's active
@@ -31,5 +31,6 @@
    setting, which the frontend reads via `useSetting`."
   []
   (let [meters (premium-features/locked-meters)]
-    (boolean (or (:transform-basic-runs meters)
-                 (:transform-advanced-runs meters)))))
+    (boolean (and (premium-features/is-hosted?)
+                  (or (:transform-basic-runs meters)
+                      (:transform-advanced-runs meters))))))
