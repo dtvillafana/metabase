@@ -62,34 +62,44 @@
          (is (false? (transforms.usage/transform-locked? {:source {:type "query"}})))))))
 
 (deftest transforms-meter-locked?-test
-  (testing "FE-facing aggregate: locked iff either transforms meter is locked"
-    (testing "no locks → false"
-      (mt/with-temporary-setting-values [locked-meters {}]
-        (is (false? (transforms.usage/transforms-meter-locked?)))))
-    (testing "basic-bucket locked → true"
-      (mt/with-temporary-setting-values [locked-meters {:transform-basic-runs true}]
-        (is (true? (transforms.usage/transforms-meter-locked?)))))
-    (testing "advanced-bucket locked → true"
-      (mt/with-temporary-setting-values [locked-meters {:transform-advanced-runs true}]
-        (is (true? (transforms.usage/transforms-meter-locked?)))))
-    (testing "both locked (defense-in-depth — harbormaster mutex says this can't happen) → still true"
-      (mt/with-temporary-setting-values [locked-meters {:transform-basic-runs    true
-                                                        :transform-advanced-runs true}]
-        (is (true? (transforms.usage/transforms-meter-locked?)))))
-    (testing "non-transform meter (e.g. :metabase-ai-tokens) does NOT affect transforms aggregate"
-      (mt/with-temporary-setting-values [locked-meters {:metabase-ai-tokens true}]
-        (is (false? (transforms.usage/transforms-meter-locked?)))))
-    (testing "false values do not count as locked"
-      (mt/with-temporary-setting-values [locked-meters {:transform-basic-runs    false
-                                                        :transform-advanced-runs false}]
-        (is (false? (transforms.usage/transforms-meter-locked?)))))))
+  (mt/with-premium-features #{:hosting}
+    (testing "FE-facing aggregate: locked iff either transforms meter is locked"
+      (testing "no locks → false"
+        (mt/with-temporary-setting-values [locked-meters {}]
+          (is (false? (transforms.usage/transforms-meter-locked?)))))
+      (testing "basic-bucket locked → true"
+        (mt/with-temporary-setting-values [locked-meters {:transform-basic-runs true}]
+          (is (true? (transforms.usage/transforms-meter-locked?)))))
+      (testing "advanced-bucket locked → true"
+        (mt/with-temporary-setting-values [locked-meters {:transform-advanced-runs true}]
+          (is (true? (transforms.usage/transforms-meter-locked?)))))
+      (testing "both locked (defense-in-depth — harbormaster mutex says this can't happen) → still true"
+        (mt/with-temporary-setting-values [locked-meters {:transform-basic-runs    true
+                                                          :transform-advanced-runs true}]
+          (is (true? (transforms.usage/transforms-meter-locked?)))))
+      (testing "non-transform meter (e.g. :metabase-ai-tokens) does NOT affect transforms aggregate"
+        (mt/with-temporary-setting-values [locked-meters {:metabase-ai-tokens true}]
+          (is (false? (transforms.usage/transforms-meter-locked?)))))
+      (testing "false values do not count as locked"
+        (mt/with-temporary-setting-values [locked-meters {:transform-basic-runs    false
+                                                          :transform-advanced-runs false}]
+          (is (false? (transforms.usage/transforms-meter-locked?))))))))
 
 (deftest transforms-meter-locked-setting-test
-  (testing "the :transforms-meter-locked setting reflects the underlying transforms-meter-locked? predicate.
+  (mt/with-premium-features #{:hosting}
+    (testing "the :transforms-meter-locked setting reflects the underlying transforms-meter-locked? predicate.
             Smoke test only — exhaustive matrix lives on transforms-meter-locked?-test above."
-    (testing "unlocked"
-      (mt/with-temporary-setting-values [locked-meters {}]
-        (is (false? (transforms/transforms-meter-locked)))))
-    (testing "locked"
-      (mt/with-temporary-setting-values [locked-meters {:transform-basic-runs true}]
-        (is (true? (transforms/transforms-meter-locked)))))))
+      (testing "unlocked"
+        (mt/with-temporary-setting-values [locked-meters {}]
+          (is (false? (transforms/transforms-meter-locked)))))
+      (testing "locked"
+        (mt/with-temporary-setting-values [locked-meters {:transform-basic-runs true}]
+          (is (true? (transforms/transforms-meter-locked))))))))
+
+(deftest self-hosted-transforms-ignore-stale-meter-locks-test
+  (mt/with-premium-features #{:transforms-basic :writable-connection :transforms-python}
+    (mt/with-temporary-setting-values [locked-meters {:transform-basic-runs true :transform-advanced-runs true}]
+      (is (false? (transforms.usage/transforms-meter-locked?)))
+      (is (false? (transforms/transforms-meter-locked)))
+      (is (false? (transforms.usage/transform-locked? {:source {:type "query"}})))
+      (is (false? (transforms.usage/transform-locked? {:source {:type "python"}}))))))

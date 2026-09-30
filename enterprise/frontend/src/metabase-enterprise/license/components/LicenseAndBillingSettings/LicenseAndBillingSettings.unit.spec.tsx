@@ -14,10 +14,12 @@ import type {
   BillingInfo,
   BillingInfoLineItem,
   TokenFeatures,
+  TokenStatus,
 } from "metabase-types/api";
 import {
   createMockSettings,
   createMockTokenFeatures,
+  createMockTokenStatus,
 } from "metabase-types/api/mocks";
 
 import { getBillingInfoId } from "../BillingInfo/utils";
@@ -51,6 +53,7 @@ const setup = async ({
   features = {},
   billingInfo,
   billingError = false,
+  tokenStatus,
 }: {
   token?: string | null;
   is_env_setting?: boolean;
@@ -58,6 +61,7 @@ const setup = async ({
   features?: Partial<TokenFeatures> & { "metabase-store-managed"?: boolean };
   billingInfo?: BillingInfo;
   billingError?: boolean;
+  tokenStatus?: Partial<TokenStatus>;
 }) => {
   const settings = createMockSettings({
     "airgap-enabled": airgapEnabled,
@@ -83,6 +87,14 @@ const setup = async ({
     valid: !!token && token !== "invalid",
     features: Object.keys(features),
   });
+  if (tokenStatus) {
+    fetchMock.removeRoute("premium-token-status");
+    fetchMock.get(
+      "path:/api/premium-features/token/status",
+      createMockTokenStatus(tokenStatus),
+      { name: "premium-token-status" },
+    );
+  }
   setupUpdateSettingEndpoint();
 
   if (billingError) {
@@ -109,6 +121,28 @@ describe("LicenseAndBilling", () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  it("explains license-free self-hosted features without billing or upgrade prompts", async () => {
+    await setup({
+      token: null,
+      tokenStatus: {
+        valid: true,
+        trial: false,
+        status: "self-hosted",
+        features: ["sandboxes", "no-upsell"],
+      },
+    });
+
+    expect(screen.getByText("Service token")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Self-hosted features are available without a license. A token is only needed for managed services.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Billing")).not.toBeInTheDocument();
+    expect(screen.queryByText("Looking for more?")).not.toBeInTheDocument();
+    expect(fetchMock.callHistory.called("path:/api/ee/billing")).toBe(false);
   });
 
   describe("render store info", () => {

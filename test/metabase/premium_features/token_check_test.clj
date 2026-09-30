@@ -6,6 +6,7 @@
    [java-time.api :as t]
    [metabase.app-db.connection :as mdb.connection]
    [metabase.app-db.core :as mdb]
+   [metabase.config.core :as config]
    [metabase.premium-features.core :as premium-features]
    [metabase.premium-features.db :as premium-features.db]
    [metabase.premium-features.settings :as premium-features.settings]
@@ -651,9 +652,12 @@
                                          :metabase-ai-tokens   {:is-locked false}})))))
 
 (deftest token-status-without-token-test
-  (testing "If premium-embedding-token is nil, the token-status setting should also be nil."
+  (testing "Without a token, EE builds expose local features; OSS has no token status."
     (mt/with-temporary-setting-values [premium-embedding-token nil]
-      (is (nil? (premium-features/token-status))))))
+      (if config/ee-available?
+        (is (=? {:valid true :status "self-hosted" :trial false}
+                (premium-features/token-status)))
+        (is (nil? (premium-features/token-status)))))))
 
 (deftest active-users-count-setting-test
   (testing "returns the number of active users"

@@ -19,7 +19,7 @@
   (case (env/env :mb-edition)
     "oss" :oss
     "ee"  :ee
-    nil   :oss))
+    nil   :ee))
 
 (defn- build-frontend! [edition]
   {:pre [(#{:oss :ee} edition)]}

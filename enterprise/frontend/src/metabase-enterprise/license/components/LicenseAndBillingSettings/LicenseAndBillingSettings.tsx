@@ -36,6 +36,10 @@ const getDescription = ({
   hasToken: boolean;
   airgapEnabled: boolean;
 }) => {
+  if (tokenStatus?.status === "self-hosted") {
+    return t`Self-hosted features are available without a license. A token is only needed for managed services.`;
+  }
+
   if (!hasToken) {
     return t`Bought a license to unlock advanced functionality? Please enter it below.`;
   }
@@ -116,6 +120,7 @@ export const LicenseAndBillingSettings = () => {
   }
 
   const hasToken = Boolean(!!token || settingDetails?.is_env_setting);
+  const isLicenseFree = tokenStatus?.status === "self-hosted";
   const description = getDescription({ tokenStatus, hasToken, airgapEnabled });
 
   const shouldShowLicenseInput =
@@ -126,24 +131,21 @@ export const LicenseAndBillingSettings = () => {
   return (
     <SettingsPageWrapper title={t`License`}>
       <SettingsSection>
-        <Stack
-          data-testid="license-and-billing-content"
-          gap="xxl"
-          maw="40rem"
-          align="start"
-        >
-          <BillingInfo
-            isStoreManagedBilling={isStoreManagedBilling}
-            hasToken={hasToken}
-            billingInfo={billingInfo}
-            error={!!billingError}
-          />
+        <Stack data-testid="license-and-billing-content" gap="xxl" maw="40rem" align="start">
+          {(!isLicenseFree || isStoreManagedBilling) && (
+            <BillingInfo
+              isStoreManagedBilling={isStoreManagedBilling}
+              hasToken={hasToken}
+              billingInfo={billingInfo}
+              error={!!billingError}
+            />
+          )}
 
           {shouldShowLicenseInput && (
             <Box>
               <SettingHeader
                 id="license"
-                title={t`License`}
+                title={isLicenseFree ? t`Service token` : t`License`}
                 description={description}
               />
               <LicenseInput
