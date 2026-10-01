@@ -14,10 +14,10 @@
 (def chatgpt-models
   "Responses models supported through the Codex subscription endpoint."
   (merge (into {} (map (fn [[id model]] [id (assoc model :context-window 272000)]))
-               (select-keys openai/supported-models ["gpt-5.4" "gpt-5.4-mini" "gpt-5.5"]))
-         {"gpt-6-sol" {:display-name "GPT-6 Sol" :context-window 272000}
-          "gpt-6-luna" {:display-name "GPT-6 Luna" :context-window 272000}
-          "gpt-5.3-codex-spark" {:display-name "GPT-5.3 Codex Spark" :context-window 128000}}))
+               (select-keys openai/supported-models ["gpt-6-astra" "gpt-6.1-sol" "gpt-6-sol" "gpt-6-luna"
+                                                     "gpt-5.6-sol" "gpt-5.6-terra" "gpt-5.6-luna"
+                                                     "gpt-5.4" "gpt-5.4-mini" "gpt-5.5"]))
+         {"gpt-5.3-codex-spark" {:display-name "GPT-5.3 Codex Spark" :context-window 128000}}))
 
 (mu/defn chatgpt-context-window :- [:maybe :int]
   "The supported subscription model's conservative input context window."
@@ -26,7 +26,8 @@
 
 (def grok-models
   "Text and tool-calling models supported through the Grok subscription endpoint."
-  {"grok-4.6" {:display-name "Grok 4.6"}
+  {"grok-4.7" {:display-name "Grok 4.7"}
+   "grok-4.6" {:display-name "Grok 4.6"}
    "grok-4.5" {:display-name "Grok 4.5"}
    "grok-4.3" {:display-name "Grok 4.3"}
    "grok-build-0.1" {:display-name "Grok Build 0.1"}})
@@ -69,6 +70,20 @@
 (def ^:private chatgpt-provider (subscription-provider "chatgpt" "ChatGPT"))
 (def ^:private grok-provider (subscription-provider "grok" "Grok"))
 
+(defn- subscription-model-listing
+  [catalog id-key supported]
+  (when-not (and (sequential? catalog)
+                 (every? (fn [entry]
+                           (and (map? entry) (string? (id-key entry)) (not (str/blank? (id-key entry)))))
+                         catalog))
+    (throw (ex-info (tru "The subscription provider returned an invalid model catalog.")
+                    {:status-code 400 :api-error true})))
+  (let [listed (adapter/model-listing supported (map #(assoc % :id (id-key %)) catalog))]
+    (when (and (seq catalog) (empty? (:models listed)))
+      (throw (ex-info (tru "Your subscription offers models that Metabot does not support yet. Update Metabase or choose another provider.")
+                      {:status-code 400 :api-error true})))
+    listed))
+
 (defn- list-subscription-models
   [provider opts path catalog-key id-key supported]
   (adapter/reject-ai-proxy! provider (:ai-proxy? opts))
@@ -76,10 +91,7 @@
     (let [response (adapter/request! provider {:method :get :path path :as :json
                                                :credentials (:credentials opts)})
           catalog (get (:body response) catalog-key)]
-      (when-not (sequential? catalog)
-        (throw (ex-info (tru "The subscription provider returned an invalid model catalog.")
-                        {:status-code 400 :api-error true})))
-      (adapter/model-listing supported (map #(assoc % :id (id-key %)) catalog)))
+      (subscription-model-listing catalog id-key supported))
     (catch Exception e
       (adapter/rethrow! provider e))))
 
@@ -87,7 +99,7 @@
   "List the Responses models available to the signed-in ChatGPT account."
   ([] (list-chatgpt-models {}))
   ([opts :- adapter/ListOpts]
-   (list-subscription-models chatgpt-provider opts "/backend-api/codex/models?client_version=0.104.0"
+   (list-subscription-models chatgpt-provider opts "/backend-api/codex/models?client_version=0.159.3"
                              :models :slug chatgpt-models)))
 
 (mu/defn list-grok-models :- adapter/ModelListing
