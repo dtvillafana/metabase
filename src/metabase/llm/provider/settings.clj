@@ -225,6 +225,19 @@
 
 ;;; ---------------------------------------------- Provider connections ------------------------------------------
 
+(defsetting llm-oauth-credentials
+  (deferred-tru "Private OAuth credentials and pending device authorizations for AI subscriptions.")
+  :type :json
+  :default []
+  :visibility :internal
+  :sensitive? true
+  :encryption :when-encryption-key-set
+  :export? false
+  :audit :never
+  :can-read-from-env? false
+  :setter :none
+  :doc false)
+
 #_{:clj-kondo/ignore [:metabase/discourage-dynamic-vars]}
 (def ^:dynamic *allow-llm-provider-write*
   "Whether a trusted provider API operation may persist [[llm-providers]] during an HTTP request."

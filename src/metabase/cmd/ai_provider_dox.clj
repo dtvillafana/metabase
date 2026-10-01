@@ -224,11 +224,18 @@
 
 (defn- credentials-section
   "What an admin has to enter to connect, and which combinations of it are enough."
-  [{:keys [type fields managed?] :as provider}]
+  [{:keys [type fields managed? oauth?] :as provider}]
   (md/paragraphs
    [(cond
       (seq fields)
       (md/labeled-block "Credentials:" (md/bullets (map #(field-entry % provider) fields)))
+
+      oauth?
+      (str "Sign in with your subscription using a device code. See "
+           (md/link "Sign in with a ChatGPT or Grok subscription"
+                    "./settings.md#sign-in-with-a-chatgpt-or-grok-subscription")
+           ". Model access and usage limits depend on your subscription tier; Metabase only offers supported models "
+           "from the signed-in account's catalog. This connection is shared across your Metabase instance.")
 
       ;; only the managed provider has nothing to enter, so it gets no block at all — what it does instead of taking
       ;; credentials is prose, and lives in its `provider-notes-resources` entry. Saying so about any other type would

@@ -10,6 +10,7 @@
    [clojure.string :as str]
    [metabase.api.common :as api]
    [metabase.api.macros :as api.macros]
+   [metabase.llm.oauth :as oauth]
    [metabase.llm.provider :as llm.provider]
    [metabase.metabot.self :as metabot.self]
    [metabase.metabot.settings :as metabot.settings]
@@ -47,6 +48,7 @@
    [:managed :boolean]
    [:singleton :boolean]
    [:available :boolean]
+   [:oauth {:optional true} :boolean]
    [:default_model [:maybe :string]]
    ;; the fixed catalog, for types whose models cannot be listed from the provider; the connection form offers
    ;; these so the connect-time credential probe runs against the model the admin actually wants
@@ -108,17 +110,18 @@
     show-when   (assoc :show_when {:field (name (:field show-when)) :value (:value show-when)})))
 
 (defn- provider-type-response
-  [{:keys [type label managed? singleton? default-model required-any requires fields]}]
-  {:type          type
-   :label         (str label)
-   :managed       (boolean managed?)
-   :singleton     (boolean singleton?)
-   :available     (llm.provider/type-available? type)
-   :default_model default-model
-   :models        (mapv #(select-keys % [:id :display_name]) (llm.provider/fixed-models type))
-   :required_any  (mapv #(mapv name %) required-any)
-   :requires      (into {} (map (fn [[k deps]] [(name k) (mapv name deps)])) requires)
-   :fields        (mapv field-response fields)})
+  [{:keys [type label managed? singleton? default-model required-any requires fields oauth?]}]
+  (cond-> {:type          type
+           :label         (str label)
+           :managed       (boolean managed?)
+           :singleton     (boolean singleton?)
+           :available     (llm.provider/type-available? type)
+           :default_model default-model
+           :models        (mapv #(select-keys % [:id :display_name]) (llm.provider/fixed-models type))
+           :required_any  (mapv #(mapv name %) required-any)
+           :requires      (into {} (map (fn [[k deps]] [(name k) (mapv name deps)])) requires)
+           :fields        (mapv field-response fields)}
+    oauth? (assoc :oauth true)))
 
 (defn- connection-response
   [{conn-key :key conn-name :name :keys [type source config env-vars env-fields] :as conn}]
@@ -281,6 +284,9 @@
     (let [{:keys [error] :as listed} (list-connection-models* conn config model true)]
       (when error
         (throw (ex-info error {:status-code 400 :api-error true})))
+      (when (and (llm.provider/oauth-type? (:type conn)) (empty? (:models listed)))
+        (throw (ex-info (tru "Your subscription does not offer any supported Metabot models.")
+                        {:status-code 400 :api-error true})))
       listed)))
 
 (defn- seed-models-cache!
@@ -397,6 +403,40 @@
   (refresh-settings!)
   (mapv connection-response (llm.provider/connections)))
 
+(api.macros/defendpoint :post "/providers/oauth/:type"
+  :- [:map
+      [:flow_id :string]
+      [:verification_url :string]
+      [:user_code :string]
+      [:expires_in :int]
+      [:interval :int]]
+  "Start subscription device sign-in. The authorization belongs to the current settings administrator."
+  [{type-name :type} :- [:map {:closed true} [:type [:enum "chatgpt" "grok"]]]]
+  (perms/check-has-application-permission :setting)
+  (check-connections-not-env-managed!)
+  (oauth/start! type-name api/*current-user-id*))
+
+(api.macros/defendpoint :post "/providers/oauth/:type/poll"
+  :- [:map
+      [:status [:enum "pending" "authorized"]]
+      [:credential_id {:optional true} :string]]
+  "Poll subscription device sign-in. Access and refresh tokens are never returned to the browser."
+  [{type-name :type} :- [:map {:closed true} [:type [:enum "chatgpt" "grok"]]]
+   _query-params
+   {:keys [flow_id]} :- [:map {:closed true} [:flow_id :string]]]
+  (perms/check-has-application-permission :setting)
+  (check-connections-not-env-managed!)
+  (oauth/poll! type-name api/*current-user-id* flow_id))
+
+(api.macros/defendpoint :delete "/providers/oauth/:type/:flow-id" :- :nil
+  "Cancel a pending subscription sign-in owned by the current administrator."
+  [{type-name :type flow-id :flow-id} :- [:map {:closed true}
+                                          [:type [:enum "chatgpt" "grok"]]
+                                          [:flow-id :string]]]
+  (perms/check-has-application-permission :setting)
+  (oauth/cancel! type-name api/*current-user-id* flow-id)
+  nil)
+
 (api.macros/defendpoint :post "/providers"
   :- connection-response-schema
   "Create a provider connection. The credentials are verified before the connection is saved."
@@ -438,14 +478,25 @@
                     :name   (or (not-empty name) (str (:label provider-type)))
                     :config config}]
       (llm.provider/validate-config! type config)
+      (when (llm.provider/oauth-type? type)
+        (oauth/check-authorization! type api/*current-user-id* (:oauth-credential-id config)))
       (let [{:keys [connection-info] :as listed} (verify-credentials! conn config model)
             conn              (update conn :config merge connection-info)
             had-usable-model? (metabot-has-a-usable-model?)]
-        (llm.provider/set-connections! (conj (llm.provider/stored-connections) conn))
+        (let [save-connection! #(llm.provider/set-connections! (conj (llm.provider/stored-connections) conn))]
+          (if (llm.provider/oauth-type? type)
+            (oauth/activate! type api/*current-user-id* (:oauth-credential-id config) save-connection!)
+            (save-connection!)))
         (when-not had-usable-model?
           ;; a type with no default model — vLLM, which serves whatever the operator loaded — starts on the model
           ;; the probe exercised, so connecting one leaves the instance working rather than model-less
-          (select-model-for-new-connection! conn (or model (:probed-model connection-info))))
+          (select-model-for-new-connection! conn (or model (:probed-model connection-info)
+                                                     (when (llm.provider/oauth-type? type)
+                                                       (let [models (:models listed)
+                                                             default (llm.provider/default-model type)]
+                                                         (if (some #(= default (:id %)) models)
+                                                           default
+                                                           (:id (first models))))))))
         (seed-models-cache! conn listed)
         (connection-response (assoc conn :source :db))))))
 
@@ -486,11 +537,20 @@
     (llm.provider/assert-base-url-change-authorized! (:type merged) (:config live) effective config
                                                      (:env-fields live))
     (llm.provider/validate-config! (:type merged) effective)
+    (when (and (llm.provider/oauth-type? (:type merged))
+               (not= (:oauth-credential-id (:config existing)) (:oauth-credential-id effective)))
+      (oauth/check-authorization! (:type merged) api/*current-user-id* (:oauth-credential-id effective)))
     (let [{:keys [connection-info] :as listed}
           (verify-credentials! merged effective (or model (selected-model conn-key)))
           merged                   (update merged :config merge connection-info)
           effective                (merge effective connection-info)]
-      (llm.provider/set-connections! (assoc stored idx merged))
+      (let [save-connection! #(llm.provider/set-connections! (assoc stored idx merged))]
+        (if (and (llm.provider/oauth-type? (:type merged))
+                 (not= (:oauth-credential-id (:config existing)) (:oauth-credential-id effective)))
+          (do
+            (oauth/activate! (:type merged) api/*current-user-id* (:oauth-credential-id effective) save-connection!)
+            (oauth/disconnect! (:oauth-credential-id (:config existing))))
+          (save-connection!)))
       (follow-edited-connection-model! (assoc merged :config effective) model)
       (seed-models-cache! (assoc merged :config effective) listed)
       (connection-response (assoc (merge live merged) :config effective)))))
@@ -511,6 +571,8 @@
       (cancel-managed-ai-subscription!))
     (let [remaining (vec (remove #(= (:key %) conn-key) (llm.provider/stored-connections)))]
       (llm.provider/set-connections! remaining)
+      (when (llm.provider/oauth-type? (:type conn))
+        (oauth/disconnect! (:oauth-credential-id (:config conn))))
       (when (= conn-key (llm.provider/model-ref->connection-key (metabot.settings/explicit-mini-model)))
         (setting/set! :llm-mini-model nil))
       (when (= conn-key (llm.provider/model-ref->connection-key (metabot.settings/llm-metabot-provider)))

@@ -36,6 +36,8 @@ export interface ExtractSourcesResponse {
 export type LlmProviderTypeName =
   | "anthropic"
   | "openai"
+  | "chatgpt"
+  | "grok"
   | "openrouter"
   | "mistral"
   | "zai"
@@ -75,6 +77,7 @@ export interface LlmProviderType {
   managed: boolean;
   singleton: boolean;
   available: boolean;
+  oauth?: boolean;
   default_model: string | null;
   models: LlmModel[];
   required_any: string[][];
@@ -124,3 +127,23 @@ export interface UpdateLlmProviderRequest {
   config?: LlmProviderConfig;
   model?: string;
 }
+
+export interface LlmOAuthStartRequest {
+  type: string;
+}
+
+export interface LlmOAuthStartResponse {
+  flow_id: string;
+  verification_url: string;
+  user_code: string;
+  expires_in: number;
+  interval: number;
+}
+
+export interface LlmOAuthPollRequest extends LlmOAuthStartRequest {
+  flow_id: string;
+}
+
+export type LlmOAuthPollResponse =
+  | { status: "pending" }
+  | { status: "authorized"; credential_id: string };

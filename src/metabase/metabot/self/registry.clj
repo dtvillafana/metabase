@@ -16,6 +16,7 @@
    [metabase.metabot.self.moonshot :as moonshot]
    [metabase.metabot.self.openai :as openai]
    [metabase.metabot.self.openrouter :as openrouter]
+   [metabase.metabot.self.subscription :as subscription]
    [metabase.metabot.self.vllm :as vllm]
    [metabase.metabot.self.zai :as zai]
    [metabase.util.malli :as mu]))
@@ -111,6 +112,14 @@
                  :supported-models #'openai/supported-models
                  :context-window   #'openai/context-window-tokens
                  :reasoning?       #'openai/streams-reasoning?}
+   "chatgpt"    {:stream           #'subscription/chatgpt
+                 :list-models      #'subscription/list-chatgpt-models
+                 :supported-models #'subscription/chatgpt-models
+                 :context-window   #'subscription/chatgpt-context-window
+                 :reasoning?       #'openai/streams-reasoning?}
+   "grok"       {:stream           #'subscription/grok
+                 :list-models      #'subscription/list-grok-models
+                 :supported-models #'subscription/grok-models}
    "openrouter" {:stream           #'openrouter/openrouter
                  :list-models      #'openrouter/list-models
                  :supported-models #'openrouter/supported-models

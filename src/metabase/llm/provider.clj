@@ -81,6 +81,19 @@
                      :type      :text
                      :advanced? true
                      :default   "https://api.openai.com"}]}
+   {:type          "chatgpt"
+    :label         (deferred-tru "ChatGPT subscription")
+    :oauth?        true
+    :default-model "gpt-5.4"
+    :mini-model    "gpt-5.4-mini"
+    :stored-config-fields [:oauth-credential-id]
+    :fields        []}
+   {:type          "grok"
+    :label         (deferred-tru "Grok subscription")
+    :oauth?        true
+    :default-model nil
+    :stored-config-fields [:oauth-credential-id]
+    :fields        []}
    {:type          "openrouter"
     :label         (deferred-tru "OpenRouter")
     :default-model "anthropic/claude-sonnet-4.6"
@@ -391,6 +404,11 @@
   [type-name]
   (boolean (:managed? (provider-type type-name))))
 
+(defn oauth-type?
+  "Whether a connection uses subscription OAuth rather than admin-entered credentials."
+  [type-name]
+  (boolean (:oauth? (provider-type type-name))))
+
 (defn type-available?
   "Whether a connection of this type can currently be created. The managed provider needs the LLM proxy configured;
   everything else is always available."
@@ -520,6 +538,11 @@
                     {:status-code 400 :type type-name})))
   (doseq [field (:fields (provider-type type-name))]
     (validate-field! type-name field config))
+  (when (oauth-type? type-name)
+    (when-not (and (u/trimmed-string (:oauth-credential-id config))
+                   (= #{:oauth-credential-id} (set (keys config))))
+      (throw (ex-info (tru "Complete subscription sign-in before connecting this provider.")
+                      {:status-code 400}))))
   (validate-required-any! type-name config)
   (validate-requires! type-name config))
 
@@ -541,7 +564,8 @@
   (let [{:keys [fields required-any requires]} (provider-type type-name)
         model-keys                              (set (model-fields type-name))
         carried?                                #(u/trimmed-string (get config %))]
-    (and (every? (fn [{:keys [key required? default]}]
+    (and (or (not (oauth-type? type-name)) (carried? :oauth-credential-id))
+         (every? (fn [{:keys [key required? default]}]
                    (or (not required?)
                        default
                        (contains? model-keys key)

@@ -1551,10 +1551,12 @@
    :ns-prefix "metabase.llm"
    :api #{metabase.llm.api
           metabase.llm.init
+          metabase.llm.oauth
           metabase.llm.provider
           metabase.llm.settings
           metabase.llm.startup}
    :uses #{api
+           app-db
            lib
            lib.be
            lib.metadata

@@ -28,6 +28,8 @@ const PROVIDER_LOGOS: Record<
 > = {
   anthropic: AnthropicMark,
   openai: OpenAiMark,
+  chatgpt: OpenAiMark,
+  grok: null,
   openrouter: OpenRouterMark,
   bedrock: BedrockMark,
   mistral: MistralMark,

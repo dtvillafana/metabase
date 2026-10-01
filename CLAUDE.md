@@ -111,3 +111,5 @@ inline-ignore budget. If either ratchet file conflicts, run `./bin/merge-kondo-r
 ## Tool Preferences
 
 If `clojure-mcp` tools are available, prefer them over shell-based alternatives for Clojure development.
+
+After completing a set of requested changes, make sure `nix flake check --build-all` passes and fix any issues before continuing or finishing.

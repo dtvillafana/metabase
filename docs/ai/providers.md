@@ -35,9 +35,11 @@ Supported models:
 | Claude Opus 4.7   | `claude-opus-4-7`            | 1,000,000               |
 | Claude Opus 4.8   | `claude-opus-4-8`            | 1,000,000               |
 | Claude Opus 5     | `claude-opus-5`              | 1,000,000               |
+| Claude Opus 5.5   | `claude-opus-5-5`            | 1,000,000               |
 | Claude Sonnet 4.5 | `claude-sonnet-4-5-20250929` | 200,000                 |
 | Claude Sonnet 4.6 | `claude-sonnet-4-6`          | 1,000,000               |
 | Claude Sonnet 5   | `claude-sonnet-5`            | 1,000,000               |
+| Claude Sonnet 5.5 | `claude-sonnet-5-5`          | 1,000,000               |
 
 Credentials:
 
@@ -68,6 +70,40 @@ Credentials:
 
 - **API key** (required). [Where do I find this?](https://platform.openai.com/api-keys) You can also set it with the environment variable `MB_LLM_OPENAI_API_KEY`.
 - **API base URL** (advanced). Defaults to `https://api.openai.com`. You can also set it with the environment variable `MB_LLM_OPENAI_API_BASE_URL`.
+
+## ChatGPT subscription
+
+- Provider key: `chatgpt`
+- Default model: `gpt-5.4`
+- Model for short tasks like naming a conversation: `gpt-5.4-mini`
+
+Supported models:
+
+| Model               | Model ID              | Context window (tokens) |
+| ------------------- | --------------------- | ----------------------- |
+| GPT-5.3 Codex Spark | `gpt-5.3-codex-spark` | 128,000                 |
+| GPT-5.4             | `gpt-5.4`             | 272,000                 |
+| GPT-5.4 Mini        | `gpt-5.4-mini`        | 272,000                 |
+| GPT-5.5             | `gpt-5.5`             | 272,000                 |
+| GPT-6 Luna          | `gpt-6-luna`          | 272,000                 |
+| GPT-6 Sol           | `gpt-6-sol`           | 272,000                 |
+
+Sign in with your subscription using a device code. See [Sign in with a ChatGPT or Grok subscription](./settings.md#sign-in-with-a-chatgpt-or-grok-subscription). Model access and usage limits depend on your subscription tier; Metabase only offers supported models from the signed-in account's catalog. This connection is shared across your Metabase instance.
+
+## Grok subscription
+
+- Provider key: `grok`
+
+Supported models:
+
+| Model          | Model ID         |
+| -------------- | ---------------- |
+| Grok 4.3       | `grok-4.3`       |
+| Grok 4.5       | `grok-4.5`       |
+| Grok 4.6       | `grok-4.6`       |
+| Grok Build 0.1 | `grok-build-0.1` |
+
+Sign in with your subscription using a device code. See [Sign in with a ChatGPT or Grok subscription](./settings.md#sign-in-with-a-chatgpt-or-grok-subscription). Model access and usage limits depend on your subscription tier; Metabase only offers supported models from the signed-in account's catalog. This connection is shared across your Metabase instance.
 
 ## OpenRouter
 

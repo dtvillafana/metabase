@@ -179,7 +179,8 @@
 (def LLMCredentials
   "A connection's credentials, in whichever provider shape it carries. Public so the adapter layer can say
   `:credentials` once rather than restating an open map at each schema that carries one."
-  [:or ApiKeyCredentials AzureCredentials BedrockCredentials GoogleCredentials])
+  [:or ApiKeyCredentials AzureCredentials BedrockCredentials GoogleCredentials
+   [:map {:closed true} [:oauth-credential-id :string]]])
 
 (def ^:private ReasoningConfig
   "A dialect-shaped reasoning/thinking directive, sent verbatim to the provider."

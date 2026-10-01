@@ -4,6 +4,7 @@
    [clojure.test :refer [deftest is testing use-fixtures]]
    [medley.core :as m]
    [metabase.llm.api.provider :as llm.api.provider]
+   [metabase.llm.oauth :as oauth]
    [metabase.llm.provider :as llm.provider]
    [metabase.metabot.self :as metabot.self]
    [metabase.metabot.settings :as metabot.settings]
@@ -15,6 +16,62 @@
    [metabase.util.json :as json]))
 
 (use-fixtures :once (fixtures/initialize :db))
+
+(deftest oauth-device-endpoints-test
+  (mt/with-dynamic-fn-redefs [oauth/start! (fn [type-name user-id]
+                                             (is (= "chatgpt" type-name))
+                                             (is (= (mt/user->id :crowberto) user-id))
+                                             {:flow_id "flow" :verification_url "https://auth.openai.com/codex/device"
+                                              :user_code "ABCD" :expires_in 600 :interval 8})
+                              oauth/poll! (fn [type-name user-id flow-id]
+                                            (is (= "chatgpt" type-name))
+                                            (is (= (mt/user->id :crowberto) user-id))
+                                            (is (= "flow" flow-id))
+                                            {:status "authorized" :credential_id "credential"})]
+    (is (=? {:flow_id "flow" :user_code "ABCD"}
+            (mt/user-http-request :crowberto :post 200 "llm/providers/oauth/chatgpt")))
+    (is (= {:status "authorized" :credential_id "credential"}
+           (mt/user-http-request :crowberto :post 200 "llm/providers/oauth/chatgpt/poll" {:flow_id "flow"})))
+    (mt/user-http-request :rasta :post 403 "llm/providers/oauth/chatgpt")
+    (mt/user-http-request :rasta :post 403 "llm/providers/oauth/chatgpt/poll" {:flow_id "flow"})))
+
+(deftest oauth-connection-lifecycle-test
+  (mt/with-temporary-setting-values [llm-providers [] llm-metabot-provider nil metabot-enabled? false]
+    (let [activations (atom [])
+          disconnects (atom [])]
+      (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn [type-name opts]
+                                                             (is (= "grok" type-name))
+                                                             (is (= #{:oauth-credential-id} (set (keys (:credentials opts)))))
+                                                             {:models [{:id "grok-4.6" :display_name "Grok 4.6"}]})
+                                  oauth/check-authorization! (fn [_ user-id credential-id]
+                                                               (is (= (mt/user->id :crowberto) user-id))
+                                                               (is (#{"credential" "replacement"} credential-id)))
+                                  oauth/activate! (fn [_ _ credential-id save!]
+                                                    (save!)
+                                                    (swap! activations conj credential-id))
+                                  oauth/disconnect! (fn [credential-id] (swap! disconnects conj credential-id))]
+        (let [created (mt/user-http-request :crowberto :post 200 "llm/providers"
+                                            {:type "grok" :config {:oauth-credential-id "credential"}})]
+          (is (= "grok" (:key created)))
+          (is (= {:oauth-credential-id "credential"} (:config created)))
+          (is (= "grok/grok-4.6" (metabot.settings/llm-metabot-provider)))
+          (is (= ["credential"] @activations))
+          (mt/user-http-request :crowberto :put 200 "llm/providers/grok"
+                                {:config {:oauth-credential-id "replacement"}})
+          (is (= ["credential" "replacement"] @activations))
+          (is (= ["credential"] @disconnects))
+          (mt/user-http-request :crowberto :delete 204 "llm/providers/grok")
+          (is (= ["credential" "replacement"] @disconnects))
+          (is (empty? (llm.provider/stored-connections))))))))
+
+(deftest oauth-connection-needs-supported-models-test
+  (mt/with-temporary-setting-values [llm-providers []]
+    (mt/with-dynamic-fn-redefs [oauth/check-authorization! (fn [& _] nil)
+                                metabot.self/list-models (constantly {:models []})]
+      (is (=? {:message "Your subscription does not offer any supported Metabot models."}
+              (mt/user-http-request :crowberto :post 400 "llm/providers"
+                                    {:type "grok" :config {:oauth-credential-id "credential"}})))
+      (is (empty? (llm.provider/stored-connections))))))
 
 (defn- connection
   ([conn-key type]
@@ -58,10 +115,10 @@
 (deftest provider-types-test
   (testing "every provider type is listed with the credential fields a connection needs"
     (let [types (mt/user-http-request :crowberto :get 200 "llm/provider-types")]
-      (is (= #{"anthropic" "openai" "openrouter" "mistral" "zai" "moonshot" "deepseek" "google" "azure" "bedrock"
+      (is (= #{"anthropic" "openai" "chatgpt" "grok" "openrouter" "mistral" "zai" "moonshot" "deepseek" "google" "azure" "bedrock"
                "vllm" "metabase"}
              (set (map :type types))))
-      (is (= ["anthropic" "openai" "openrouter" "mistral" "zai" "moonshot" "deepseek" "google" "azure" "bedrock"
+      (is (= ["anthropic" "openai" "chatgpt" "grok" "openrouter" "mistral" "zai" "moonshot" "deepseek" "google" "azure" "bedrock"
               "vllm"]
              (remove #{"metabase"} (map :type types)))
           "the bring-your-own-key providers keep their registry order")
