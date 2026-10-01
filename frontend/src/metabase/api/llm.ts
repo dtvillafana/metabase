@@ -3,6 +3,10 @@ import type {
   ExtractSourcesRequest,
   ExtractSourcesResponse,
   LlmConnectionModels,
+  LlmOAuthPollRequest,
+  LlmOAuthPollResponse,
+  LlmOAuthStartRequest,
+  LlmOAuthStartResponse,
   LlmProviderConnection,
   LlmProviderType,
   UpdateLlmProviderRequest,
@@ -59,6 +63,28 @@ export const llmApi = Api.injectEndpoints({
           "session-properties",
         ]),
     }),
+    startLlmOAuth: builder.mutation<
+      LlmOAuthStartResponse,
+      LlmOAuthStartRequest
+    >({
+      query: ({ type }) => ({
+        method: "POST",
+        url: `/api/llm/providers/oauth/${encodeURIComponent(type)}`,
+      }),
+    }),
+    pollLlmOAuth: builder.mutation<LlmOAuthPollResponse, LlmOAuthPollRequest>({
+      query: ({ type, flow_id }) => ({
+        method: "POST",
+        url: `/api/llm/providers/oauth/${encodeURIComponent(type)}/poll`,
+        body: { flow_id },
+      }),
+    }),
+    cancelLlmOAuth: builder.mutation<void, LlmOAuthPollRequest>({
+      query: ({ type, flow_id }) => ({
+        method: "DELETE",
+        url: `/api/llm/providers/oauth/${encodeURIComponent(type)}/${encodeURIComponent(flow_id)}`,
+      }),
+    }),
     updateLlmProvider: builder.mutation<
       LlmProviderConnection,
       UpdateLlmProviderRequest
@@ -98,4 +124,7 @@ export const {
   useCreateLlmProviderMutation,
   useUpdateLlmProviderMutation,
   useDeleteLlmProviderMutation,
+  useStartLlmOAuthMutation,
+  usePollLlmOAuthMutation,
+  useCancelLlmOAuthMutation,
 } = llmApi;

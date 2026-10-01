@@ -791,7 +791,7 @@
                 "so a type without a decided logo fails to compile. Nothing links the two, so adding a type here "
                 "without updating them ships a provider that silently falls back to the generic icon. Update "
                 "both, then this list.")
-    (is (= #{"anthropic" "openai" "openrouter" "mistral" "zai" "moonshot" "deepseek" "xai" "google" "azure"
+    (is (= #{"anthropic" "openai" "chatgpt" "grok" "openrouter" "mistral" "zai" "moonshot" "deepseek" "xai" "google" "azure"
              "bedrock" "vllm" "ollama" "openai-compatible" "metabase"}
            (into #{} (map :type) (llm.provider/provider-types))))))
 
@@ -821,6 +821,8 @@
   (testing "every type's default model, which is what a first connection of that type gets selected for it"
     (is (= {"anthropic"  "claude-sonnet-4-6"
             "openai"     "gpt-5.4"
+            "chatgpt"    "gpt-5.4"
+            "grok"       nil
             "openrouter" "anthropic/claude-sonnet-4.6"
             "mistral"    "mistral-medium-3-5"
             "zai"        "glm-5.2"
@@ -844,6 +846,8 @@
                 "as nil and quietly sends titles to the full-size model instead.")
     (is (= {"anthropic"  "claude-haiku-4-5-20251001"
             "openai"     "gpt-5.4-mini"
+            "chatgpt"    "gpt-5.4-mini"
+            "grok"       nil
             "openrouter" "anthropic/claude-haiku-4.5"
             "mistral"    "mistral-medium-3-5"
             "zai"        "glm-5.2"

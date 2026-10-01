@@ -29,6 +29,7 @@ import type {
   LlmProviderType,
 } from "metabase-types/api";
 
+import { OAuthProviderConnection } from "./OAuthProviderConnection";
 import { ProviderConfigFields } from "./ProviderConfigFields";
 import { ProviderTypeIcon } from "./ProviderTypeIcon";
 import { ProviderTypePicker } from "./ProviderTypePicker";
@@ -237,6 +238,18 @@ export function ProviderConnectionForm({
           onCancel={isEditing ? undefined : handleBack}
         />
       </>
+    ))
+    .with({ providerType: { oauth: true } }, ({ providerType: selected }) => (
+      <Stack gap="xl">
+        {!isEditing && <SelectedProvider providerType={selected} />}
+        <OAuthProviderConnection
+          key={selected.type}
+          providerType={selected}
+          connection={connection}
+          onSaved={onSaved}
+          onCancel={isEditing ? onCancel : handleBack}
+        />
+      </Stack>
     ))
     .with({ providerType: P.nonNullable }, ({ providerType: selected }) => (
       <form onSubmit={handleSubmit}>

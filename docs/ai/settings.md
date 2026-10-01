@@ -65,6 +65,22 @@ If you've already copied a key, one neat thing: just paste the key anywhere on t
 
 Once the connection saves, its models show up in the **Models** card, where you pick which model each AI feature runs on. See [Pick the model each AI feature runs on](#pick-the-model-each-ai-feature-runs-on).
 
+### Sign in with a ChatGPT or Grok subscription
+
+To use a subscription instead of a separately billed API key:
+
+1. Go to **Admin > AI** and click **Add a provider**.
+2. Pick **ChatGPT subscription** or **Grok subscription**, then click **Sign in**.
+3. Open the sign-in page, enter the displayed code, and approve access with your provider.
+4. Return to Metabase. Once it shows **Signed in**, click **Connect**.
+5. Pick a model in the **Models** card.
+
+The subscription connection is shared by everyone using Metabot on this Metabase instance. Model access and usage limits depend on the account's subscription tier. Metabase won't fall back to a separately billed API key if the subscription reaches its limit or doesn't include a model.
+
+Metabase stores and refreshes OAuth tokens on the server; it doesn't send them to your browser. On self-hosted instances, set [`MB_ENCRYPTION_SECRET_KEY`](../configuring-metabase/environment-variables.md#mb_encryption_secret_key) to encrypt stored credentials. Review your provider's terms and data handling policies before sharing subscription access across your instance.
+
+To sign in again or switch accounts, open the connection's **... > Edit** menu and click **Sign in again**. Removing the connection deletes its saved credentials from Metabase, but doesn't cancel your provider subscription.
+
 ### Connect more than one provider
 
 You can connect as many providers as you want. Once you've added your first one, the card is titled **AI providers** and the button reads **Add another provider**.
