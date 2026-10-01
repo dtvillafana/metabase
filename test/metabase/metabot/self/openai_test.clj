@@ -397,7 +397,8 @@
 
 (deftest ^:parallel supported-models-test
   (testing "whitelisted models are supported"
-    (doseq [id ["gpt-6-astra" "gpt-5.6-sol" "gpt-5.6-terra" "gpt-5.6-luna" "gpt-5.5" "gpt-5.4-mini"]]
+    (doseq [id ["gpt-6-astra" "gpt-6.1-sol" "gpt-6-sol" "gpt-6-luna"
+                "gpt-5.6-sol" "gpt-5.6-terra" "gpt-5.6-luna" "gpt-5.5" "gpt-5.4-mini" "gpt-5.4-nano"]]
       (is (contains? openai/supported-models id) id)))
   (testing "non-white-listed models are not supported"
     (doseq [id ["gpt-5" "gpt-4.1" "gpt-4.1-mini" "gpt-4o" "o3" "text-embedding-3-small"]]
@@ -408,7 +409,10 @@
     (mt/with-temporary-setting-values [llm.settings/llm-openai-api-key "sk-test"]
       (with-redefs [http/request (fn [_]
                                    {:status 200
-                                    :body   {:data [{:id "gpt-6-astra"            :created 41}
+                                    :body   {:data [{:id "gpt-6.1-sol"            :created 44}
+                                                    {:id "gpt-6-sol"             :created 43}
+                                                    {:id "gpt-6-luna"            :created 42}
+                                                    {:id "gpt-6-astra"            :created 41}
                                                     {:id "gpt-5.6-sol"            :created 40}
                                                     {:id "gpt-5.6-luna"           :created 39}
                                                     {:id "gpt-5-mini"             :created 30}
@@ -423,7 +427,10 @@
         (is (= [{:id "gpt-5.4" :display_name "GPT-5.4"}
                 {:id "gpt-5.6-luna" :display_name "GPT-5.6 Luna"}
                 {:id "gpt-5.6-sol" :display_name "GPT-5.6 Sol"}
-                {:id "gpt-6-astra" :display_name "GPT-6 Astra"}]
+                {:id "gpt-6-astra" :display_name "GPT-6 Astra"}
+                {:id "gpt-6-luna" :display_name "GPT-6 Luna"}
+                {:id "gpt-6-sol" :display_name "GPT-6 Sol"}
+                {:id "gpt-6.1-sol" :display_name "GPT-6.1 Sol"}]
                (:models (openai/list-models {:credentials byok-credentials}))))))))
 
 (deftest openai-raw-explicit-credentials-test

@@ -683,7 +683,7 @@
   (testing "every type's default model, which is what a first connection of that type gets selected for it"
     (is (= {"anthropic"  "claude-sonnet-4-6"
             "openai"     "gpt-5.4"
-            "chatgpt"    "gpt-5.4"
+            "chatgpt"    "gpt-6.1-sol"
             "grok"       nil
             "openrouter" "anthropic/claude-sonnet-4.6"
             "mistral"    "mistral-medium-3-5"
@@ -705,7 +705,7 @@
                 "as nil and quietly sends titles to the full-size model instead.")
     (is (= {"anthropic"  "claude-haiku-4-5-20251001"
             "openai"     "gpt-5.4-mini"
-            "chatgpt"    "gpt-5.4-mini"
+            "chatgpt"    "gpt-6-luna"
             "grok"       nil
             "openrouter" "anthropic/claude-haiku-4.5"
             "mistral"    "mistral-medium-3-5"

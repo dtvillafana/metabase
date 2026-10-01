@@ -84,8 +84,8 @@
    {:type          "chatgpt"
     :label         (deferred-tru "ChatGPT subscription")
     :oauth?        true
-    :default-model "gpt-5.4"
-    :mini-model    "gpt-5.4-mini"
+    :default-model "gpt-6.1-sol"
+    :mini-model    "gpt-6-luna"
     :stored-config-fields [:oauth-credential-id]
     :fields        []}
    {:type          "grok"

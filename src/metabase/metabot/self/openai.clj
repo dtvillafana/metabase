@@ -250,6 +250,9 @@
   "OpenAI chat models offered in the Metabot model picker, keyed by model id.
   `list-models` returns the intersection of this map with the account's `/v1/models` catalog."
   {"gpt-6-astra"   {:display-name "GPT-6 Astra"   :context-window 922000}
+   "gpt-6.1-sol"   {:display-name "GPT-6.1 Sol"   :context-window 922000}
+   "gpt-6-sol"     {:display-name "GPT-6 Sol"     :context-window 922000}
+   "gpt-6-luna"    {:display-name "GPT-6 Luna"    :context-window 922000}
    "gpt-5.6-sol"   {:display-name "GPT-5.6 Sol"   :context-window 922000}
    "gpt-5.6-terra" {:display-name "GPT-5.6 Terra" :context-window 922000}
    "gpt-5.6-luna"  {:display-name "GPT-5.6 Luna"  :context-window 922000}
@@ -257,7 +260,8 @@
    "gpt-5.5-pro"   {:display-name "GPT-5.5 Pro"   :context-window 922000}
    "gpt-5.4"       {:display-name "GPT-5.4"       :context-window 922000}
    "gpt-5.4-pro"   {:display-name "GPT-5.4 Pro"   :context-window 922000}
-   "gpt-5.4-mini"  {:display-name "GPT-5.4 Mini"  :context-window 272000}})
+   "gpt-5.4-mini"  {:display-name "GPT-5.4 Mini"  :context-window 272000}
+   "gpt-5.4-nano"  {:display-name "GPT-5.4 Nano"  :context-window 272000}})
 
 (mu/defn context-window-tokens :- [:maybe :int]
   "The input context window for `model`, or nil when it isn't one we know."

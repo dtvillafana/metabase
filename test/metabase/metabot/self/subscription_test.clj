@@ -31,6 +31,21 @@
       (is (nil? (:include body)))
       (is (nil? (:reasoning body))))))
 
+(deftest ^:parallel current-model-request-bodies-test
+  (doseq [model ["gpt-6-astra" "gpt-6.1-sol" "gpt-6-sol" "gpt-6-luna"]]
+    (let [body (subscription/chatgpt-request-body (assoc opts :model model :schema {:type "object"}))]
+      (is (= model (:model body)))
+      (is (= "required" (:tool_choice body)))
+      (is (= {:summary "auto"} (:reasoning body)))
+      (is (not (contains? body :temperature)))
+      (is (not (contains? body :max_output_tokens)))
+      (is (= 272000 (subscription/chatgpt-context-window model)))))
+  (let [body (subscription/grok-request-body (assoc opts :model "grok-4.7" :schema {:type "object"}))]
+    (is (= "grok-4.7" (:model body)))
+    (is (= "required" (:tool_choice body)))
+    (is (not (contains? body :reasoning)))
+    (is (not (contains? body :include)))))
+
 (deftest catalog-and-auth-test
   (mt/with-dynamic-fn-redefs [oauth/credential! (fn [type-name id]
                                                   (is (#{"chatgpt" "grok"} type-name))
@@ -39,7 +54,7 @@
                               core/request (fn [auth req]
                                              (is (= "Bearer subscription-access" (get-in auth [:headers "Authorization"])))
                                              (case (:url req)
-                                               "/backend-api/codex/models?client_version=0.104.0"
+                                               "/backend-api/codex/models?client_version=0.159.3"
                                                (do
                                                  (is (= "https://chatgpt.com" (:url auth)))
                                                  (is (= "account" (get-in auth [:headers "ChatGPT-Account-Id"])))
@@ -56,6 +71,35 @@
            (subscription/list-chatgpt-models (select-keys opts [:credentials]))))
     (is (= {:models [{:id "grok-4.5" :display_name "Grok 4.5"} {:id "grok-4.6" :display_name "Grok 4.6"}]}
            (subscription/list-grok-models (select-keys opts [:credentials]))))))
+
+(deftest latest-subscription-models-test
+  (doseq [[list-models catalog expected]
+          [[subscription/list-chatgpt-models
+            {:models (mapv #(hash-map :slug %) ["gpt-6-astra" "gpt-6.1-sol" "gpt-6-sol" "gpt-6-luna"
+                                                "gpt-5.6-sol" "gpt-5.6-terra" "gpt-5.6-luna"])}
+            #{"gpt-6-astra" "gpt-6.1-sol" "gpt-6-sol" "gpt-6-luna"
+              "gpt-5.6-sol" "gpt-5.6-terra" "gpt-5.6-luna"}]
+           [subscription/list-grok-models
+            {:data [{:id "grok-4.7"} {:model "grok-4.6"} {:id "grok-4.5"}]}
+            #{"grok-4.7" "grok-4.6" "grok-4.5"}]]]
+    (mt/with-dynamic-fn-redefs [adapter/request! (fn [& _] {:body catalog})]
+      (is (= expected (set (map :id (:models (list-models (select-keys opts [:credentials]))))))))))
+
+(deftest subscription-catalog-errors-test
+  (doseq [[list-models catalog-key id-key] [[subscription/list-chatgpt-models :models :slug]
+                                            [subscription/list-grok-models :data :id]]]
+    (testing "a genuinely empty catalog is distinct from an unsupported catalog"
+      (mt/with-dynamic-fn-redefs [adapter/request! (fn [& _] {:body {catalog-key []}})]
+        (is (= {:models []} (list-models (select-keys opts [:credentials]))))))
+    (testing "an unknown model must not be misreported as a subscription entitlement failure"
+      (mt/with-dynamic-fn-redefs [adapter/request! (fn [& _] {:body {catalog-key [{id-key "future-model"}]}})]
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"models that Metabot does not support"
+                              (list-models (select-keys opts [:credentials]))))))
+    (testing "malformed catalog entries fail instead of silently disappearing"
+      (doseq [entry [{} {id-key ""} {id-key 123} "not-a-model"]]
+        (mt/with-dynamic-fn-redefs [adapter/request! (fn [& _] {:body {catalog-key [entry]}})]
+          (is (thrown-with-msg? clojure.lang.ExceptionInfo #"invalid model catalog"
+                                (list-models (select-keys opts [:credentials])))))))))
 
 (deftest streaming-endpoints-test
   (mt/with-dynamic-fn-redefs [oauth/credential! (fn [& _] {:access-token "subscription-access"})

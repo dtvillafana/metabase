@@ -7,6 +7,7 @@
    [metabase.llm.oauth :as oauth]
    [metabase.llm.provider :as llm.provider]
    [metabase.metabot.self :as metabot.self]
+   [metabase.metabot.self.adapter :as adapter]
    [metabase.metabot.settings :as metabot.settings]
    [metabase.permissions.core :as perms]
    [metabase.settings.core :as setting]
@@ -71,6 +72,31 @@
       (is (=? {:message "Your subscription does not offer any supported Metabot models."}
               (mt/user-http-request :crowberto :post 400 "llm/providers"
                                     {:type "grok" :config {:oauth-credential-id "credential"}})))
+      (is (empty? (llm.provider/stored-connections))))))
+
+(deftest chatgpt-connection-selects-an-available-current-model-test
+  (mt/with-temporary-setting-values [llm-providers [] llm-metabot-provider nil metabot-enabled? false]
+    (mt/with-dynamic-fn-redefs [oauth/check-authorization! (fn [& _] nil)
+                                oauth/activate! (fn [_ _ _ save!] (save!))
+                                adapter/request! (fn [& _]
+                                                   {:body {:models [{:slug "gpt-6-astra"}
+                                                                    {:slug "gpt-6.1-sol"}
+                                                                    {:slug "gpt-6-luna"}]}})]
+      (is (=? {:key "chatgpt" :usable true}
+              (mt/user-http-request :crowberto :post 200 "llm/providers"
+                                    {:type "chatgpt" :config {:oauth-credential-id "credential"}})))
+      (is (= "chatgpt/gpt-6.1-sol" (metabot.settings/llm-metabot-provider)))
+      (is (= "chatgpt/gpt-6-luna" (metabot.settings/llm-mini-model))))))
+
+(deftest unsupported-subscription-catalog-is-not-an-entitlement-error-test
+  (mt/with-temporary-setting-values [llm-providers []]
+    (mt/with-dynamic-fn-redefs [oauth/check-authorization! (fn [& _] nil)
+                                adapter/request! (fn [& _] {:body {:models [{:slug "future-model"}]}})
+                                oauth/activate! (fn [& _] (is false "failed verification must not activate credentials"))]
+      (is (re-find #"models that Metabot does not support"
+                   (:message (mt/user-http-request :crowberto :post 400 "llm/providers"
+                                                   {:type "chatgpt"
+                                                    :config {:oauth-credential-id "credential"}}))))
       (is (empty? (llm.provider/stored-connections))))))
 
 (defn- connection
