@@ -538,14 +538,16 @@
               };
             };
 
-          default = mkMetabaseJar { };
+          # Local premium features need enterprise code in both the backend and frontend.
+          default = mkMetabaseJar { edition = "ee"; };
         in
         {
           inherit default;
           inherit clojureDeps frontendDeps pythonDeps;
           metabase = default;
           metabase-wrapped = mkMetabaseWrapped default;
-          ee = mkMetabaseJar { edition = "ee"; };
+          ee = default;
+          oss = mkMetabaseJar { edition = "oss"; };
         }
       );
 
