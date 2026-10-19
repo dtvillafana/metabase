@@ -31,7 +31,7 @@ const PROVIDER_LOGOS: Record<
   anthropic: AnthropicMark,
   openai: OpenAiMark,
   chatgpt: OpenAiMark,
-  grok: null,
+  grok: XaiMark,
   openrouter: OpenRouterMark,
   bedrock: BedrockMark,
   mistral: MistralMark,

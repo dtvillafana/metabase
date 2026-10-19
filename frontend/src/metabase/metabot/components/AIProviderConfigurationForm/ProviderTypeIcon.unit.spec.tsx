@@ -25,6 +25,7 @@ describe("ProviderTypeIcon", () => {
   it.each([
     "anthropic",
     "openai",
+    "grok",
     "openrouter",
     "mistral",
     "zai",
