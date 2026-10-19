@@ -89,7 +89,7 @@
     :stored-config-fields [:oauth-credential-id]
     :fields        []}
    {:type          "grok"
-    :label         (deferred-tru "Grok subscription")
+    :label         (deferred-tru "xAI subscription")
     :oauth?        true
     :default-model nil
     :stored-config-fields [:oauth-credential-id]

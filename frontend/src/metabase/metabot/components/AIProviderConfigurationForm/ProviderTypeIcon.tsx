@@ -14,6 +14,7 @@ import MistralMark from "./logos/mistral.svg?component";
 import MoonshotMark from "./logos/moonshot.svg?component";
 import OpenAiMark from "./logos/openai.svg?component";
 import OpenRouterMark from "./logos/openrouter.svg?component";
+import XaiMark from "./logos/xai.svg?component";
 import ZaiMark from "./logos/zai.svg?component";
 
 const GENERIC_PROVIDER_ICON = "ai";
@@ -29,7 +30,7 @@ const PROVIDER_LOGOS: Record<
   anthropic: AnthropicMark,
   openai: OpenAiMark,
   chatgpt: OpenAiMark,
-  grok: null,
+  grok: XaiMark,
   openrouter: OpenRouterMark,
   bedrock: BedrockMark,
   mistral: MistralMark,
