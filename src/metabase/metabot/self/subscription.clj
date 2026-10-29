@@ -14,7 +14,7 @@
 (def chatgpt-models
   "Responses models supported through the Codex subscription endpoint."
   (merge (into {} (map (fn [[id model]] [id (assoc model :context-window 272000)]))
-               (select-keys openai/supported-models ["gpt-6-astra" "gpt-6.1-sol" "gpt-6-sol" "gpt-6-luna"
+               (select-keys openai/supported-models ["gpt-6-astra" "gpt-6.1-sol" "gpt-6.1-terra" "gpt-6-sol" "gpt-6-luna"
                                                      "gpt-5.6-sol" "gpt-5.6-terra" "gpt-5.6-luna"
                                                      "gpt-5.4" "gpt-5.4-mini" "gpt-5.5"]))
          {"gpt-5.3-codex-spark" {:display-name "GPT-5.3 Codex Spark" :context-window 128000}}))

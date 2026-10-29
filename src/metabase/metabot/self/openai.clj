@@ -258,6 +258,7 @@
   `list-models` returns the intersection of this map with the account's `/v1/models` catalog."
   {"gpt-6-astra"   {:display-name "GPT-6 Astra"   :context-window 922000}
    "gpt-6.1-sol"   {:display-name "GPT-6.1 Sol"   :context-window 922000}
+   "gpt-6.1-terra" {:display-name "GPT-6.1 Terra" :context-window 922000}
    "gpt-6-sol"     {:display-name "GPT-6 Sol"     :context-window 922000}
    "gpt-6-luna"    {:display-name "GPT-6 Luna"    :context-window 922000}
    "gpt-5.6-sol"   {:display-name "GPT-5.6 Sol"   :context-window 922000}

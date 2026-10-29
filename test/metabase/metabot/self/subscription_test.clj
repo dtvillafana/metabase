@@ -32,7 +32,7 @@
       (is (nil? (:reasoning body))))))
 
 (deftest ^:parallel current-model-request-bodies-test
-  (doseq [model ["gpt-6-astra" "gpt-6.1-sol" "gpt-6-sol" "gpt-6-luna"]]
+  (doseq [model ["gpt-6-astra" "gpt-6.1-sol" "gpt-6.1-terra" "gpt-6-sol" "gpt-6-luna"]]
     (let [body (subscription/chatgpt-request-body (assoc opts :model model :schema {:type "object"}))]
       (is (= model (:model body)))
       (is (= "required" (:tool_choice body)))
@@ -75,9 +75,9 @@
 (deftest latest-subscription-models-test
   (doseq [[list-models catalog expected]
           [[subscription/list-chatgpt-models
-            {:models (mapv #(hash-map :slug %) ["gpt-6-astra" "gpt-6.1-sol" "gpt-6-sol" "gpt-6-luna"
+            {:models (mapv #(hash-map :slug %) ["gpt-6-astra" "gpt-6.1-sol" "gpt-6.1-terra" "gpt-6-sol" "gpt-6-luna"
                                                 "gpt-5.6-sol" "gpt-5.6-terra" "gpt-5.6-luna"])}
-            #{"gpt-6-astra" "gpt-6.1-sol" "gpt-6-sol" "gpt-6-luna"
+            #{"gpt-6-astra" "gpt-6.1-sol" "gpt-6.1-terra" "gpt-6-sol" "gpt-6-luna"
               "gpt-5.6-sol" "gpt-5.6-terra" "gpt-5.6-luna"}]
            [subscription/list-grok-models
             {:data [{:id "grok-4.7"} {:model "grok-4.6"} {:id "grok-4.5"}]}
