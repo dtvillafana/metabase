@@ -138,13 +138,19 @@
             }
           '';
 
+          # This checkout targets Metabase 65; the second version component is the schema major.
+          releaseVersion = "65.0";
           defaultVersion =
-            if self ? shortRev then
-              "0.0.0-${self.shortRev}"
-            else if self ? dirtyShortRev then
-              "0.0.0-${self.dirtyShortRev}"
-            else
-              "UNKNOWN";
+            edition:
+            "${if edition == "ee" then "1" else "0"}.${releaseVersion}-SNAPSHOT"
+            + (
+              if self ? shortRev then
+                "-${self.shortRev}"
+              else if self ? dirtyShortRev then
+                "-${self.dirtyShortRev}"
+              else
+                ""
+            );
 
           gitRev =
             if self ? rev then
@@ -159,7 +165,7 @@
           mkMetabaseJar =
             {
               edition ? "oss",
-              version ? defaultVersion,
+              version ? defaultVersion edition,
             }:
             let
               frontendDeps = self.packages.${system}.frontendDeps;
@@ -325,6 +331,24 @@
                 install -Dm644 target/uberjar/metabase.jar "$out/share/java/metabase.jar"
 
                 runHook postInstall
+              '';
+
+              doInstallCheck = true;
+              installCheckPhase = ''
+                runHook preInstallCheck
+
+                # Read the installed artifact, not the dependency caches. No database is opened.
+                JAVA_TOOL_OPTIONS= MB_RUN_MODE=prod java -cp "$out/share/java/metabase.jar" clojure.main -e '
+                  (require (quote [metabase.config.core :as config])
+                           (quote [metabase.app-db.liquibase.versions :as versions]))
+                  (assert (= "v${version}" (:tag config/mb-version-info)))
+                  (assert (= ${lib.versions.major releaseVersion} (config/current-major-version)))
+                  (assert (= ${lib.versions.major releaseVersion} (versions/current-recorded-major)))
+                  (assert (zero? (versions/compare-versions "x.${releaseVersion}" (versions/current-recorded-version))))
+                  (println "Verified packaged Metabase version:" config/mb-version-string)
+                '
+
+                runHook postInstallCheck
               '';
 
               meta = {
