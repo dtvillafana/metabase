@@ -58,7 +58,7 @@
 
 (defn- meter-value
   [meters meter-key]
-  (some-> meter-key keyword meters))
+  (some->> meter-key keyword (get meters)))
 
 (defn- default-metabase-meter-key
   []

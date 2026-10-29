@@ -131,7 +131,12 @@ export const LicenseAndBillingSettings = () => {
   return (
     <SettingsPageWrapper title={t`License`}>
       <SettingsSection>
-        <Stack data-testid="license-and-billing-content" gap="xxl" maw="40rem" align="start">
+        <Stack
+          data-testid="license-and-billing-content"
+          gap="xxl"
+          maw="40rem"
+          align="start"
+        >
           {(!isLicenseFree || isStoreManagedBilling) && (
             <BillingInfo
               isStoreManagedBilling={isStoreManagedBilling}

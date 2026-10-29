@@ -226,7 +226,7 @@
 ;;; ---------------------------------------------- Provider connections ------------------------------------------
 
 (defsetting llm-oauth-credentials
-  (deferred-tru "Private OAuth credentials and pending device authorizations for AI subscriptions.")
+  "Private OAuth credentials and pending device authorizations for AI subscriptions."
   :type :json
   :default []
   :visibility :internal

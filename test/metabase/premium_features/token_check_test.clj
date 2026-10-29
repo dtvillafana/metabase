@@ -6,7 +6,6 @@
    [java-time.api :as t]
    [metabase.app-db.connection :as mdb.connection]
    [metabase.app-db.core :as mdb]
-   [metabase.config.core :as config]
    [metabase.premium-features.core :as premium-features]
    [metabase.premium-features.db :as premium-features.db]
    [metabase.premium-features.settings :as premium-features.settings]
@@ -44,7 +43,11 @@
         (.close ^dev.failsafe.CircuitBreaker breaker)
         (reset! entry saved)))))
 
-(use-fixtures :each do-with-clean-refresher)
+(use-fixtures :each
+  (fn [thunk]
+    ;; Exercise token-derived entitlements independently of the local self-hosted grants.
+    (mt/with-dynamic-fn-redefs [premium-features.settings/self-hosted-features (constantly #{})]
+      (do-with-clean-refresher thunk))))
 
 (defn- do-with-store
   [respond f]
@@ -652,12 +655,9 @@
                                          :metabase-ai-tokens   {:is-locked false}})))))
 
 (deftest token-status-without-token-test
-  (testing "Without a token, EE builds expose local features; OSS has no token status."
+  (testing "Without a token or local grants, the token status is nil."
     (mt/with-temporary-setting-values [premium-embedding-token nil]
-      (if config/ee-available?
-        (is (=? {:valid true :status "self-hosted" :trial false}
-                (premium-features/token-status)))
-        (is (nil? (premium-features/token-status)))))))
+      (is (nil? (premium-features/token-status))))))
 
 (deftest active-users-count-setting-test
   (testing "returns the number of active users"

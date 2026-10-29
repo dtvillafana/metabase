@@ -115,16 +115,16 @@
 (defn- provider-type-response
   [{:keys [type label managed? singleton? default-model model-fields required-any requires fields oauth?]}]
   (cond-> {:type          type
-   :label         (str label)
-   :managed       (boolean managed?)
-   :singleton     (boolean singleton?)
-   :available     (llm.provider/type-available? type)
-   :default_model default-model
-   :models        (mapv #(select-keys % [:id :display_name]) (llm.provider/fixed-models type))
-   :model_fields  (into [] (comp (filter keyword?) (map name)) model-fields)
-   :required_any  (mapv #(mapv name %) required-any)
-   :requires      (into {} (map (fn [[k deps]] [(name k) (mapv name deps)])) requires)
-   :fields        (mapv field-response fields)}
+           :label         (str label)
+           :managed       (boolean managed?)
+           :singleton     (boolean singleton?)
+           :available     (llm.provider/type-available? type)
+           :default_model default-model
+           :models        (mapv #(select-keys % [:id :display_name]) (llm.provider/fixed-models type))
+           :model_fields  (into [] (comp (filter keyword?) (map name)) model-fields)
+           :required_any  (mapv #(mapv name %) required-any)
+           :requires      (into {} (map (fn [[k deps]] [(name k) (mapv name deps)])) requires)
+           :fields        (mapv field-response fields)}
     oauth? (assoc :oauth true)))
 
 (defn- connection-response
@@ -525,7 +525,14 @@
           (when-not had-usable-model?
             ;; a type with no default model — vLLM, which serves whatever the operator loaded — starts on the model
             ;; the probe exercised, so connecting one leaves the instance working rather than model-less
-            (select-model-for-new-connection! live (or model (:probed-model connection-info))))
+            (select-model-for-new-connection!
+             live (or model (:probed-model connection-info)
+                      (when (llm.provider/oauth-type? type)
+                        (let [models (:models listed)
+                              default (llm.provider/default-model type)]
+                          (if (some #(= default (:id %)) models)
+                            default
+                            (:id (first models))))))))
           (seed-models-cache! live listed)
           (connection-response live))))))
 

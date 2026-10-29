@@ -36,7 +36,7 @@ export function OAuthProviderConnection({
   const [cancel] = useCancelLlmOAuthMutation();
   const [create, createResult] = useCreateLlmProviderMutation();
   const [update, updateResult] = useUpdateLlmProviderMutation();
-  const pendingFlow = useRef<string>();
+  const pendingFlow = useRef<string | undefined>(undefined);
   const isMounted = useRef(true);
   const isSaving = createResult.isLoading || updateResult.isLoading;
 
@@ -154,7 +154,7 @@ export function OAuthProviderConnection({
       {credentialId && (
         <Text>{t`Signed in. Connect to verify model access and save this subscription.`}</Text>
       )}
-      {error && <Text c="error">{error}</Text>}
+      {error && <Text c="feedback-negative">{error}</Text>}
       <Group justify="end">
         {onCancel && (
           <Button onClick={onCancel} disabled={isSaving}>

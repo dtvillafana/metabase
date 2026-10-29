@@ -12,11 +12,12 @@
 (deftest self-hosted-features-without-token-test
   (with-redefs [config/ee-available? true]
     (mt/with-dynamic-fn-redefs [premium-features.settings/premium-embedding-token (constantly nil)
-                                token-check/check-token (fn [& _] (throw (ex-info "Unexpected token check" {})))]
+                                token-check/current-status (constantly nil)]
       (testing "Local features are available without contacting the license server"
         (doseq [feature [:advanced-permissions :audit-app :sandboxes :sso-jwt :sso-saml :sso-oidc :scim
                          :multi-factor-auth :serialization :whitelabel :embedding-sdk :remote-sync :library
-                         :dependencies :transforms-basic :writable-connection :custom-viz :schema-viewer]]
+                         :dependencies :transforms-basic :writable-connection :custom-viz :schema-viewer
+                         :session-management :content-diagnostics]]
           (is (true? (premium-features/has-feature? feature)) (name feature))
           (is (true? (premium-features/canonically-has-feature? feature)) (name feature))
           (is (nil? (premium-features/assert-has-feature feature (name feature))))))
@@ -43,7 +44,7 @@
 (deftest self-hosted-features-with-invalid-token-test
   (with-redefs [config/ee-available? true]
     (mt/with-dynamic-fn-redefs [premium-features.settings/premium-embedding-token (constantly "expired-token")
-                                token-check/check-token (constantly {:valid false :canonical? true :status "expired"})]
+                                token-check/current-status (constantly {:valid false :canonical? true :status "expired"})]
       (is (true? (premium-features/has-feature? :sandboxes)))
       (is (true? (premium-features/canonically-has-feature? :dependencies)))
       (is (false? (premium-features/has-feature? :metabase-ai-managed)))
@@ -53,7 +54,7 @@
   (let [status {:valid true :canonical? true :status "valid" :trial true :features ["hosting" "audit-app"]}]
     (with-redefs [config/ee-available? true]
       (mt/with-dynamic-fn-redefs [premium-features.settings/premium-embedding-token (constantly "cloud-token")
-                                  token-check/check-token (constantly status)]
+                                  token-check/current-status (constantly status)]
         (is (= status (premium-features/token-status)))
         (is (true? (premium-features/has-feature? :hosting)))
         (is (false? (premium-features/has-feature? :sandboxes)))
@@ -62,7 +63,7 @@
 (deftest external-service-status-remains-indeterminate-test
   (with-redefs [config/ee-available? true]
     (mt/with-dynamic-fn-redefs [premium-features.settings/premium-embedding-token (constantly "unreachable-token")
-                                token-check/check-token (constantly {:valid false :canonical? false :status "unavailable"})]
+                                token-check/current-status (constantly nil)]
       (is (true? (premium-features/canonically-has-feature? :sandboxes)))
       (doseq [feature [:hosting :metabot-v3 :metabase-ai-managed]]
         (is (nil? (premium-features/canonically-has-feature? feature)))))))

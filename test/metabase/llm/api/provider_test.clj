@@ -72,9 +72,9 @@
   (mt/with-temporary-setting-values [llm-providers []]
     (mt/with-dynamic-fn-redefs [oauth/check-authorization! (fn [& _] nil)
                                 metabot.self/list-models (constantly {:models []})]
-      (is (=? {:message "Your subscription does not offer any supported Metabot models."}
-              (mt/user-http-request :crowberto :post 400 "llm/providers"
-                                    {:type "grok" :config {:oauth-credential-id "credential"}})))
+      (is (= "Your subscription does not offer any supported Metabot models."
+             (mt/user-http-request :crowberto :post 400 "llm/providers"
+                                   {:type "grok" :config {:oauth-credential-id "credential"}})))
       (is (empty? (llm.provider/stored-connections))))))
 
 (deftest chatgpt-connection-selects-an-available-current-model-test
@@ -97,9 +97,9 @@
                                 adapter/request! (fn [& _] {:body {:models [{:slug "future-model"}]}})
                                 oauth/activate! (fn [& _] (is false "failed verification must not activate credentials"))]
       (is (re-find #"models that Metabot does not support"
-                   (:message (mt/user-http-request :crowberto :post 400 "llm/providers"
-                                                   {:type "chatgpt"
-                                                    :config {:oauth-credential-id "credential"}}))))
+                   (mt/user-http-request :crowberto :post 400 "llm/providers"
+                                         {:type "chatgpt"
+                                          :config {:oauth-credential-id "credential"}})))
       (is (empty? (llm.provider/stored-connections))))))
 
 (defn- connection
